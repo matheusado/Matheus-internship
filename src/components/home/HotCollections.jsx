@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
+import axios from "axios";
 
 const HotCollections = () => {
   const [collections, setCollections] = useState([]);
@@ -31,19 +32,16 @@ const HotCollections = () => {
   });
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchCollections = async () => {
       try {
-        const response = await fetch(
+        const response = await axios.get(
           "https://us-central1-nft-cloud-functions.cloudfunctions.net/hotCollections",
+          { signal: controller.signal },
         );
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch collections: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const data = response.data;
 
         if (!Array.isArray(data)) {
           throw new Error("API response is not an array");
@@ -52,14 +50,24 @@ const HotCollections = () => {
         console.log("Hot Collections API response:", data);
         setCollections(data);
       } catch (error) {
+        if (axios.isCancel(error)) {
+          return;
+        }
+
         console.error("Error fetching collections:", error);
         setError(error.message);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchCollections();
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   useEffect(() => {
@@ -86,11 +94,8 @@ const HotCollections = () => {
               <div className="col-lg-3 col-md-6 col-sm-6" key={item}>
                 <div className="nft_coll skeleton-card">
                   <div className="skeleton-image skeleton"></div>
-
                   <div className="skeleton-avatar skeleton"></div>
-
                   <div className="skeleton-title skeleton"></div>
-
                   <div className="skeleton-code skeleton"></div>
                 </div>
               </div>
@@ -98,7 +103,7 @@ const HotCollections = () => {
           </div>
         )}
 
-        {error && (
+        {!loading && error && (
           <div className="text-center">
             <p>Unable to load collections: {error}</p>
           </div>
