@@ -4,6 +4,9 @@ import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
 import axios from "axios";
 
+const API_URL =
+  "https://us-central1-nft-cloud-functions.cloudfunctions.net/hotCollections";
+
 const HotCollections = () => {
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,26 +39,23 @@ const HotCollections = () => {
 
     const fetchCollections = async () => {
       try {
-        const response = await axios.get(
-          "https://us-central1-nft-cloud-functions.cloudfunctions.net/hotCollections",
-          { signal: controller.signal },
-        );
+        const response = await axios.get(API_URL, {
+          signal: controller.signal,
+        });
 
-        const data = response.data;
-
-        if (!Array.isArray(data)) {
+        if (!Array.isArray(response.data)) {
           throw new Error("API response is not an array");
         }
 
-        console.log("Hot Collections API response:", data);
-        setCollections(data);
-      } catch (error) {
-        if (axios.isCancel(error)) {
-          return;
+        if (!controller.signal.aborted) {
+          setCollections(response.data);
+          setError(null);
         }
-
-        console.error("Error fetching collections:", error);
-        setError(error.message);
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          console.error("Error fetching collections:", err);
+          setError("Unable to load collections.");
+        }
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -65,9 +65,7 @@ const HotCollections = () => {
 
     fetchCollections();
 
-    return () => {
-      controller.abort();
-    };
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -105,7 +103,7 @@ const HotCollections = () => {
 
         {!loading && error && (
           <div className="text-center">
-            <p>Unable to load collections: {error}</p>
+            <p role="alert">{error}</p>
           </div>
         )}
 
@@ -118,39 +116,63 @@ const HotCollections = () => {
         {!loading && !error && collections.length > 0 && (
           <div className="hot-collections-slider">
             <div ref={sliderRef} className="keen-slider">
-              {collections.map((collection) => (
-                <div className="keen-slider__slide" key={collection.id}>
-                  <div className="nft_coll">
-                    <div className="nft_wrap">
-                      <Link to="/item-details">
-                        <img
-                          src={collection.nftImage}
-                          className="lazy img-fluid"
-                          alt={collection.title}
-                        />
-                      </Link>
-                    </div>
+              {collections.map((collection) => {
+                const collectionItem = {
+                  ...collection,
+                  title: collection.title,
+                  nftImage: collection.nftImage,
+                  authorImage: collection.authorImage,
+                  authorId: collection.authorId,
+                  type: "collection",
+                };
 
-                    <div className="nft_coll_pp">
-                      <Link to="/author">
-                        <img
-                          className="lazy pp-coll"
-                          src={collection.authorImage}
-                          alt={`${collection.title} creator`}
-                        />
-                      </Link>
-                      <i className="fa fa-check"></i>
-                    </div>
+                return (
+                  <div className="keen-slider__slide" key={collection.id}>
+                    <div className="nft_coll">
+                      <div className="nft_wrap">
+                        <Link
+                          to="/item-details"
+                          state={{ item: collectionItem }}
+                        >
+                          <img
+                            src={collection.nftImage}
+                            className="lazy img-fluid"
+                            alt={collection.title}
+                          />
+                        </Link>
+                      </div>
 
-                    <div className="nft_coll_info">
-                      <Link to="/explore">
-                        <h4>{collection.title}</h4>
-                      </Link>
-                      <span>ERC-{collection.code}</span>
+                      <div className="nft_coll_pp">
+                        <Link
+                          to={
+                            collection.authorId != null
+                              ? `/author/${collection.authorId}`
+                              : "/author"
+                          }
+                        >
+                          <img
+                            className="lazy pp-coll"
+                            src={collection.authorImage}
+                            alt={`${collection.title} creator`}
+                          />
+                        </Link>
+                        <i className="fa fa-check"></i>
+                      </div>
+
+                      <div className="nft_coll_info">
+                        <Link
+                          to="/item-details"
+                          state={{ item: collectionItem }}
+                        >
+                          <h4>{collection.title}</h4>
+                        </Link>
+
+                        <span>ERC-{collection.code}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {collections.length > 1 && (

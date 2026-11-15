@@ -1,7 +1,61 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import AuthorImage from "../../images/author_thumbnail.jpg";
 import nftImage from "../../images/nftImage.jpg";
+
+const AuthorCardImage = ({
+  src,
+  alt,
+  className,
+  frameClassName,
+  skeletonClassName,
+  skeletonLabel,
+  children,
+}) => {
+  const imageRef = useRef(null);
+  const [loadedSrc, setLoadedSrc] = useState(null);
+  const ready = loadedSrc === src;
+
+  useEffect(() => {
+    const node = imageRef.current;
+
+    if (node?.complete && node.getAttribute("src") === src) {
+      setLoadedSrc(src);
+    }
+  }, [src]);
+
+  const finishLoading = (event) => {
+    if (event.currentTarget.getAttribute("src") === src) {
+      setLoadedSrc(src);
+    }
+  };
+
+  return (
+    <>
+      <span className={frameClassName}>
+        {!ready && (
+          <span
+            className={`skeleton ${skeletonClassName}`}
+            role="status"
+            aria-label={skeletonLabel}
+          />
+        )}
+
+        <img
+          ref={imageRef}
+          src={src}
+          alt={alt}
+          className={className}
+          style={{ opacity: ready ? 1 : 0 }}
+          onLoad={finishLoading}
+          onError={finishLoading}
+        />
+      </span>
+
+      {ready ? children : null}
+    </>
+  );
+};
 
 const AuthorItems = () => {
   return (
@@ -13,8 +67,16 @@ const AuthorItems = () => {
               <div className="nft__item">
                 <div className="author_list_pp">
                   <Link to="">
-                    <img className="lazy" src={AuthorImage} alt="" />
-                    <i className="fa fa-check"></i>
+                    <AuthorCardImage
+                      src={AuthorImage}
+                      alt=""
+                      className="lazy"
+                      frameClassName="author-item-avatar-frame"
+                      skeletonClassName="author-item-avatar-skeleton"
+                      skeletonLabel="Loading creator image"
+                    >
+                      <i className="fa fa-check"></i>
+                    </AuthorCardImage>
                   </Link>
                 </div>
                 <div className="nft__item_wrap">
@@ -36,10 +98,13 @@ const AuthorItems = () => {
                     </div>
                   </div>
                   <Link to="/item-details">
-                    <img
+                    <AuthorCardImage
                       src={nftImage}
-                      className="lazy nft__item_preview"
                       alt=""
+                      className="lazy nft__item_preview"
+                      frameClassName="author-item-preview-frame"
+                      skeletonClassName="author-item-preview-skeleton"
+                      skeletonLabel="Loading NFT artwork"
                     />
                   </Link>
                 </div>
