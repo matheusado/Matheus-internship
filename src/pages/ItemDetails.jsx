@@ -1,11 +1,18 @@
-
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import axios from "axios";
+import { Link, useParams } from "react-router-dom";
 import EthImage from "../images/ethereum.svg";
-import AuthorImage from "../images/author_thumbnail.jpg";
-import nftImage from "../images/nftImage.jpg";
 
-const ENTRY_TRANSITION_MS = 300;
+const ITEM_DETAILS_URL =
+  "https://us-central1-nft-cloud-functions.cloudfunctions.net/itemDetails";
+
+const imageRequestSettled = (node, src) => {
+  if (!node || !src || node.getAttribute("src") !== src || !node.complete) {
+    return false;
+  }
+
+  return node.naturalWidth > 0 || node.naturalWidth === 0;
+};
 
 const DetailImage = ({
   src,
@@ -21,22 +28,20 @@ const DetailImage = ({
   const ready = loadedSrc === src;
 
   useEffect(() => {
-    const node = imageRef.current;
-
-    if (node?.complete && node.getAttribute("src") === src) {
+    if (imageRequestSettled(imageRef.current, src)) {
       setLoadedSrc(src);
     }
   }, [src]);
 
   const finishLoading = (event) => {
-    if (event.currentTarget.getAttribute("src") === src) {
+    if (imageRequestSettled(event.currentTarget, src)) {
       setLoadedSrc(src);
     }
   };
 
   return (
     <>
-      <div className={frameClassName}>
+      <div className={`${frameClassName}${ready ? "" : " is-loading"}`}>
         {!ready && (
           <div
             className={`skeleton ${skeletonClassName}`}
@@ -61,211 +66,268 @@ const DetailImage = ({
   );
 };
 
-const ItemDetails = () => {
-  const location = useLocation();
-  const item = location.state?.item;
+const personFromDetails = (details, role) => {
+  const id = details?.[`${role}Id`];
+  const name = details?.[`${role}Name`];
+  const image = details?.[`${role}Image`];
 
-  const title = item?.title ?? "Rainbow Style #194";
-  const image = item?.nftImage ?? nftImage;
-  const likes = item?.likes ?? 74;
-  const price = item?.price ?? 1.85;
-  const authorImage = item?.authorImage ?? AuthorImage;
-
-  const authorLink =
-    item?.authorId != null
-      ? `/author/${item.authorId}`
-      : "/author";
-
-  const authorName =
-    item?.authorName ??
-    (item?.authorId != null
-      ? `Author #${item.authorId}`
-      : "Monica Lucas");
-
-  const [entryState, setEntryState] = useState(() => ({
-    id: location.key,
-    ready: false,
-  }));
-
-  if (entryState.id !== location.key) {
-    setEntryState({ id: location.key, ready: false });
+  if (id == null || !name || !image) {
+    return null;
   }
 
-  const entryReady = entryState.ready && entryState.id === location.key;
+  return { id, name, image };
+};
+
+const PeopleSkeleton = () => (
+  <div className="item-details-people" aria-hidden="true">
+    {["Owner", "Creator"].map((label) => (
+      <div className="item-details-person" key={label}>
+        <h6>{label}</h6>
+        <div className="item_author">
+          <div className="author_list_pp">
+            <div className="item-details-avatar-frame">
+              <div className="skeleton item-details-avatar-skeleton" />
+            </div>
+          </div>
+          <div className="author_list_info">
+            <div className="skeleton item-details-name-skeleton" />
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const DetailPerson = ({ label, person }) => {
+  const profileLink = `/author/${person.id}`;
+
+  return (
+    <div className="item-details-person">
+      <h6>{label}</h6>
+      <div className="item_author">
+        <div className="author_list_pp">
+          <Link to={profileLink}>
+            <DetailImage
+              src={person.image}
+              alt={person.name}
+              className="lazy"
+              frameClassName="item-details-avatar-frame"
+              skeletonClassName="item-details-avatar-skeleton"
+              skeletonLabel={`Loading ${label.toLowerCase()} image`}
+            >
+              <i className="fa fa-check"></i>
+            </DetailImage>
+          </Link>
+        </div>
+        <div className="author_list_info">
+          <Link to={profileLink}>{person.name}</Link>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ItemDetailsSkeleton = () => (
+  <div className="row" role="status" aria-label="Loading NFT details">
+    <div className="col-md-6 text-center">
+      <div className="item-details-image-container is-loading">
+        <div className="skeleton item-details-image-skeleton" />
+      </div>
+    </div>
+    <div className="col-md-6">
+      <div className="item_info">
+        <div className="skeleton item-details-title-skeleton" />
+        <div className="item_info_counts">
+          <div className="skeleton item-details-likes-skeleton" />
+          <div className="skeleton item-details-likes-skeleton" />
+        </div>
+        <div className="skeleton item-details-description-skeleton" />
+        <PeopleSkeleton />
+        <h6>Price</h6>
+        <div className="skeleton item-details-price-skeleton" />
+      </div>
+    </div>
+  </div>
+);
+
+const ItemDetails = () => {
+  const { nftId } = useParams();
+  const [view, setView] = useState(() => ({
+    nftId,
+    status: nftId ? "loading" : "missing",
+    item: null,
+    error: nftId ? null : "No NFT selected.",
+  }));
+  const [retryCount, setRetryCount] = useState(0);
+
+  if (view.nftId !== nftId) {
+    setView({
+      nftId,
+      status: nftId ? "loading" : "missing",
+      item: null,
+      error: nftId ? null : "No NFT selected.",
+    });
+  }
+
+  const item = view.nftId === nftId ? view.item : null;
+  const status = view.nftId === nftId ? view.status : "loading";
+  const error = view.nftId === nftId ? view.error : null;
 
   useEffect(() => {
     window.scrollTo(0, 0);
 
-    const timer = window.setTimeout(() => {
-      setEntryState((current) =>
-        current.id === location.key
-          ? { id: location.key, ready: true }
-          : current
-      );
-    }, ENTRY_TRANSITION_MS);
+    if (!nftId) {
+      return undefined;
+    }
 
-    return () => window.clearTimeout(timer);
-  }, [location.key]);
+    const controller = new AbortController();
+
+    const fetchItem = async () => {
+      setView({
+        nftId,
+        status: "loading",
+        item: null,
+        error: null,
+      });
+
+      try {
+        const response = await axios.get(ITEM_DETAILS_URL, {
+          params: { nftId },
+          signal: controller.signal,
+        });
+        const data = response.data;
+
+        if (
+          !data ||
+          typeof data !== "object" ||
+          Array.isArray(data) ||
+          String(data.nftId) !== String(nftId)
+        ) {
+          throw new Error("not-found");
+        }
+
+        if (!controller.signal.aborted) {
+          setView({
+            nftId,
+            status: "ready",
+            item: data,
+            error: null,
+          });
+        }
+      } catch (err) {
+        if (axios.isCancel(err) || controller.signal.aborted) {
+          return;
+        }
+
+        console.error("Error loading item details:", err);
+        const notFound = err?.message === "not-found";
+        setView({
+          nftId,
+          status: "error",
+          item: null,
+          error: notFound
+            ? "This NFT could not be found."
+            : "Unable to load this NFT.",
+        });
+      }
+    };
+
+    fetchItem();
+
+    return () => controller.abort();
+  }, [nftId, retryCount]);
+
+  const owner = personFromDetails(item, "owner");
+  const creator = personFromDetails(item, "creator");
+  const title = item?.tag != null ? `${item.title} #${item.tag}` : item?.title;
 
   return (
     <div id="wrapper">
       <div className="no-bottom no-top" id="content">
         <div id="top"></div>
-
-        <section
-          aria-label="NFT details"
-          className="mt90 sm-mt-0"
-        >
+        <section aria-label="NFT details" className="mt90 sm-mt-0">
           <div className="container">
-            <div className="row">
-              {/* NFT artwork */}
-              <div className="col-md-6 text-center">
-                {entryReady ? (
+            {status === "loading" && <ItemDetailsSkeleton />}
+
+            {status !== "loading" && error && (
+              <div className="row">
+                <div className="col-md-12 text-center">
+                  <p role="alert">{error}</p>
+                  {nftId && status === "error" && error !== "This NFT could not be found." && (
+                    <button
+                      type="button"
+                      className="btn-main"
+                      onClick={() => setRetryCount((count) => count + 1)}
+                    >
+                      Retry
+                    </button>
+                  )}
+                  <div className="spacer-20"></div>
+                  <Link to="/explore" className="btn-main">
+                    Back to Explore
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {status === "ready" && item && (
+              <div className="row">
+                <div className="col-md-6 text-center">
                   <DetailImage
-                    src={image}
-                    alt={title}
+                    src={item.nftImage}
+                    alt={item.title || "NFT artwork"}
                     className="img-fluid img-rounded mb-sm-30 nft-image"
                     frameClassName="item-details-image-container"
                     skeletonClassName="item-details-image-skeleton"
                     skeletonLabel="Loading NFT artwork"
                   />
-                ) : (
-                  <div className="item-details-image-container">
-                    <div
-                      className="skeleton item-details-image-skeleton"
-                      role="status"
-                      aria-label="Loading NFT artwork"
-                    />
-                  </div>
-                )}
-              </div>
+                </div>
 
-              {/* NFT information */}
-              <div className="col-md-6">
-                <div className="item_info">
-                  {entryReady ? (
-                    <h2>{title}</h2>
-                  ) : (
-                    <div
-                      className="skeleton item-details-title-skeleton"
-                      role="status"
-                      aria-label="Loading NFT title"
-                    />
-                  )}
+                <div className="col-md-6">
+                  <div className="item_info">
+                    {title && <h2>{title}</h2>}
 
-                  <div className="item_info_counts">
-                    {entryReady && !item && (
-                      <div className="item_info_views">
-                        <i className="fa fa-eye"></i>
-                        100
+                    {(item.views != null || item.likes != null) && (
+                      <div className="item_info_counts">
+                        {item.views != null && (
+                          <div className="item_info_views">
+                            <i className="fa fa-eye"></i>
+                            {item.views}
+                          </div>
+                        )}
+                        {item.likes != null && (
+                          <div className="item_info_like">
+                            <i className="fa fa-heart"></i>
+                            {item.likes}
+                          </div>
+                        )}
                       </div>
                     )}
 
-                    {entryReady ? (
-                      <div className="item_info_like">
-                        <i className="fa fa-heart"></i>
-                        {likes}
-                      </div>
-                    ) : (
-                      <div
-                        className="skeleton item-details-likes-skeleton"
-                        role="status"
-                        aria-label="Loading likes"
-                      />
-                    )}
-                  </div>
+                    {item.description && <p>{item.description}</p>}
 
-                  {!item && (
-                    <p>
-                      doloremque laudantium, totam rem aperiam,
-                      eaque ipsa quae ab illo inventore
-                      veritatis et quasi architecto beatae
-                      vitae dicta sunt explicabo.
-                    </p>
-                  )}
-
-                  <div className="d-flex flex-row">
-                    <div className="mr40">
-                      <h6>Creator</h6>
-
-                      <div className="item_author">
-                        <div className="author_list_pp">
-                          {entryReady ? (
-                            <Link to={authorLink}>
-                              <DetailImage
-                                src={authorImage}
-                                alt={authorName}
-                                className="lazy"
-                                frameClassName="item-details-avatar-frame"
-                                skeletonClassName="item-details-avatar-skeleton"
-                                skeletonLabel="Loading creator image"
-                              >
-                                <i className="fa fa-check"></i>
-                              </DetailImage>
-                            </Link>
-                          ) : (
-                            <div className="item-details-avatar-frame">
-                              <div
-                                className="skeleton item-details-avatar-skeleton"
-                                role="status"
-                                aria-label="Loading creator image"
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="author_list_info">
-                          {entryReady ? (
-                            <Link to={authorLink}>
-                              {authorName}
-                            </Link>
-                          ) : (
-                            <div
-                              className="skeleton item-details-name-skeleton"
-                              role="status"
-                              aria-label="Loading creator name"
-                            />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="de_tab tab_simple">
-                    <div className="de_tab_content">
-                      <div className="spacer-40"></div>
-
-                      <h6>Price</h6>
-
-                      {entryReady ? (
-                        <div className="nft-item-price">
-                          <img
-                            src={EthImage}
-                            alt="Ethereum"
-                          />
-                          <span>{price}</span>
-                        </div>
-                      ) : (
-                        <div
-                          className="skeleton item-details-price-skeleton"
-                          role="status"
-                          aria-label="Loading price"
-                        />
+                    <div className="item-details-people">
+                      {owner && <DetailPerson label="Owner" person={owner} />}
+                      {creator && (
+                        <DetailPerson label="Creator" person={creator} />
                       )}
                     </div>
+
+                    <div className="de_tab tab_simple">
+                      <div className="de_tab_content">
+                        <h6>Price</h6>
+                        {item.price != null && (
+                          <div className="nft-item-price">
+                            <img src={EthImage} alt="Ethereum" />
+                            <span>{item.price}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="spacer-20"></div>
-
-                  <Link
-                    to="/explore"
-                    className="btn-main"
-                  >
-                    Back to Explore
-                  </Link>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </section>
       </div>
