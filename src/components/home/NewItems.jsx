@@ -100,7 +100,12 @@ export const NFTCard = ({ item, now = Date.now() }) => {
           </div>
         </div>
 
-        <Link to="/item-details" state={{ item }}>
+        <Link
+          to={
+            item.nftId != null ? `/item-details/${item.nftId}` : "/item-details"
+          }
+          state={{ item }}
+        >
           <img
             src={item.nftImage}
             className="lazy nft__item_preview"
@@ -111,7 +116,12 @@ export const NFTCard = ({ item, now = Date.now() }) => {
 
       {/* NFT information */}
       <div className="nft__item_info">
-        <Link to="/item-details" state={{ item }}>
+        <Link
+          to={
+            item.nftId != null ? `/item-details/${item.nftId}` : "/item-details"
+          }
+          state={{ item }}
+        >
           <h4>{item.title}</h4>
         </Link>
 

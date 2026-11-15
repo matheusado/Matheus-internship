@@ -131,7 +131,11 @@ const HotCollections = () => {
                     <div className="nft_coll">
                       <div className="nft_wrap">
                         <Link
-                          to="/item-details"
+                          to={
+                            collection.nftId != null
+                              ? `/item-details/${collection.nftId}`
+                              : "/item-details"
+                          }
                           state={{ item: collectionItem }}
                         >
                           <img
@@ -161,7 +165,11 @@ const HotCollections = () => {
 
                       <div className="nft_coll_info">
                         <Link
-                          to="/item-details"
+                          to={
+                            collection.nftId != null
+                              ? `/item-details/${collection.nftId}`
+                              : "/item-details"
+                          }
                           state={{ item: collectionItem }}
                         >
                           <h4>{collection.title}</h4>
