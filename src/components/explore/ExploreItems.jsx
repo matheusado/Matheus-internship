@@ -137,7 +137,7 @@ const ExploreItems = () => {
           {items.slice(0, visibleCount).map((item) => (
             <div
               key={item.nftId ?? item.id}
-              className="d-item col-lg-3 col-md-6 col-sm-6 col-xs-12"
+              className="col-lg-3 col-md-6 col-sm-6 col-xs-12"
             >
               <NFTCard item={item} now={now} />
             </div>

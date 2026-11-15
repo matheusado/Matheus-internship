@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import AuthorBanner from "../images/author_banner.jpg";
@@ -14,6 +14,10 @@ const Author = () => {
   const [author, setAuthor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [loadedAvatarSrc, setLoadedAvatarSrc] = useState(null);
+  const avatarRef = useRef(null);
+  const avatarReady =
+    author != null && loadedAvatarSrc === author.authorImage;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -65,6 +69,15 @@ const Author = () => {
     return () => controller.abort();
   }, [authorId]);
 
+  useLayoutEffect(() => {
+    const node = avatarRef.current;
+    const avatarSrc = author?.authorImage;
+
+    if (node?.complete && avatarSrc && node.getAttribute("src") === avatarSrc) {
+      setLoadedAvatarSrc(avatarSrc);
+    }
+  }, [author, loading]);
+
   return (
     <div id="wrapper">
       <div className="no-bottom no-top" id="content">
@@ -115,7 +128,7 @@ const Author = () => {
                   <div className="de_tab tab_simple">
                     <div className="de_tab_content">
                       <div className="tab-1">
-                        <div className="row explore-skeleton-grid">
+                        <div className="row explore-skeleton-grid author-items-skeleton">
                           {Array.from({ length: 8 }, (_, index) => (
                             <div
                               key={index}
@@ -146,9 +159,40 @@ const Author = () => {
                   <div className="d_profile de-flex">
                     <div className="de-flex-col">
                       <div className="profile_avatar">
-                        <img src={author.authorImage} alt={author.authorName} />
+                        <span className="author-profile-avatar-frame">
+                          {!avatarReady && (
+                            <span
+                              className="skeleton author-profile-avatar-placeholder"
+                              role="status"
+                              aria-label="Loading author image"
+                            />
+                          )}
 
-                        <i className="fa fa-check"></i>
+                          <img
+                            ref={avatarRef}
+                            src={author.authorImage}
+                            alt={author.authorName}
+                            style={{ opacity: avatarReady ? 1 : 0 }}
+                            onLoad={(event) => {
+                              if (
+                                event.currentTarget.getAttribute("src") ===
+                                author.authorImage
+                              ) {
+                                setLoadedAvatarSrc(author.authorImage);
+                              }
+                            }}
+                            onError={(event) => {
+                              if (
+                                event.currentTarget.getAttribute("src") ===
+                                author.authorImage
+                              ) {
+                                setLoadedAvatarSrc(author.authorImage);
+                              }
+                            }}
+                          />
+                        </span>
+
+                        {avatarReady && <i className="fa fa-check"></i>}
 
                         <div className="profile_name">
                           <h4>
