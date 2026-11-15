@@ -16834,3 +16834,63 @@ img {
   }
 }
 
+
+/* New Items carousel */
+
+.new-items-slider {
+  position: relative;
+  margin-top: 24px;
+}
+
+.new-items-slider .keen-slider {
+  align-items: stretch;
+}
+
+.new-items-slider .keen-slider__slide {
+  min-width: 0;
+  padding: 4px 0 16px;
+}
+
+.new-items-slider .nft__item {
+  position: relative;
+  height: 100%;
+  margin: 0;
+}
+
+.new-items-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.new-items-prev {
+  left: -22px;
+}
+
+.new-items-next {
+  right: -22px;
+}
+
+.new-items-arrow:hover {
+  background: #6c55d9;
+  color: #fff;
+}
+
+@media (max-width: 600px) {
+  .new-items-prev {
+    left: 0;
+  }
+
+  .new-items-next {
+    right: 0;
+  }
+}
