@@ -363,7 +363,7 @@ const Author = () => {
                           aria-pressed={isFollowed}
                           onClick={toggleFollow}
                         >
-                          {isFollowed ? "Following" : "Follow"}
+                          {isFollowed ? "Unfollow" : "Follow"}
                         </button>
                       </div>
                     </div>
