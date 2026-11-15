@@ -14,6 +14,7 @@ const ExploreItems = () => {
   const [now, setNow] = useState(Date.now());
   const [retryCount, setRetryCount] = useState(0);
 
+  // Fetch NFTs from Explore API
   useEffect(() => {
     const controller = new AbortController();
 
@@ -33,6 +34,7 @@ const ExploreItems = () => {
 
         if (!controller.signal.aborted) {
           setItems(response.data);
+          setError(null);
         }
       } catch (err) {
         if (!controller.signal.aborted) {
@@ -51,6 +53,7 @@ const ExploreItems = () => {
     return () => controller.abort();
   }, [filter, retryCount]);
 
+  // Update NFT countdown timers every second
   useEffect(() => {
     const interval = setInterval(() => {
       setNow(Date.now());
@@ -59,19 +62,28 @@ const ExploreItems = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Change sorting filter
   const handleFilterChange = (event) => {
     setFilter(event.target.value);
     setVisibleCount(8);
   };
 
+  // Display 4 additional NFTs
   const handleLoadMore = () => {
-    setVisibleCount((previous) => previous + 4);
+    setVisibleCount((previous) => Math.min(previous + 4, items.length));
   };
 
   return (
     <>
+      {/* Sorting filter */}
       <div className="col-md-12">
-        <select id="filter-items" value={filter} onChange={handleFilterChange}>
+        <select
+          id="filter-items"
+          value={filter}
+          onChange={handleFilterChange}
+          disabled={loading}
+          aria-label="Sort NFTs"
+        >
           <option value="">Default</option>
           <option value="price_low_to_high">Price, Low to High</option>
           <option value="price_high_to_low">Price, High to Low</option>
@@ -79,19 +91,29 @@ const ExploreItems = () => {
         </select>
       </div>
 
-      {loading &&
-        Array.from({ length: 8 }, (_, index) => (
-          <div
-            key={`skeleton-${index}`}
-            className="d-item col-lg-3 col-md-6 col-sm-6 col-xs-12"
-          >
-            <NFTSkeleton />
+      {/* Reusable skeleton loading */}
+      {loading && (
+        <div className="col-md-12" role="status" aria-label="Loading NFTs">
+          <div className="row explore-skeleton-grid">
+            {Array.from({ length: 8 }, (_, index) => (
+              <div
+                key={`skeleton-${index}`}
+                className="col-lg-3 col-md-6 col-sm-6 col-xs-12"
+              >
+                <NFTSkeleton />
+              </div>
+            ))}
           </div>
-        ))}
 
+          <span className="visually-hidden">Loading NFTs...</span>
+        </div>
+      )}
+
+      {/* API error */}
       {!loading && error && (
         <div className="col-md-12 text-center">
           <p role="alert">{error}</p>
+
           <button
             type="button"
             className="btn-main"
@@ -102,27 +124,26 @@ const ExploreItems = () => {
         </div>
       )}
 
+      {/* Empty results */}
       {!loading && !error && items.length === 0 && (
         <div className="col-md-12 text-center">
           <p>No NFTs available.</p>
         </div>
       )}
 
-      {!loading && !error && (
+      {/* NFT cards */}
+      {!loading && !error && items.length > 0 && (
         <>
           {items.slice(0, visibleCount).map((item) => (
             <div
               key={item.nftId ?? item.id}
               className="d-item col-lg-3 col-md-6 col-sm-6 col-xs-12"
-              style={{
-                display: "block",
-                backgroundSize: "cover",
-              }}
             >
               <NFTCard item={item} now={now} />
             </div>
           ))}
 
+          {/* Load more */}
           {visibleCount < items.length && (
             <div className="col-md-12 text-center">
               <button
