@@ -1,0 +1,15 @@
+[data-aos="fade-up"] {
+  transform: translate3d(0, 16px, 0);
+}
+
+[data-aos="fade-left"] {
+  transform: translate3d(16px, 0, 0);
+}
+
+[data-aos="fade-right"] {
+  transform: translate3d(-16px, 0, 0);
+}
+
+[data-aos="zoom-in"] {
+  transform: scale(0.96);
+}

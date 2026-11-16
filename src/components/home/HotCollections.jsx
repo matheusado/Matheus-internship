@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
 import axios from "axios";
+import AOS from "aos";
 
 const API_URL =
   "https://us-central1-nft-cloud-functions.cloudfunctions.net/hotCollections";
@@ -74,12 +75,20 @@ const HotCollections = () => {
     }
   }, [collections, instanceRef]);
 
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      AOS.refreshHard();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [loading, collections]);
+
   return (
     <section id="section-collections" className="no-bottom">
       <div className="container">
         <div className="row">
           <div className="col-lg-12">
-            <div className="text-center">
+            <div className="text-center" data-aos="fade-up" data-aos-duration="700">
               <h2>Hot Collections</h2>
               <div className="small-border bg-color-2"></div>
             </div>
@@ -116,7 +125,7 @@ const HotCollections = () => {
         {!loading && !error && collections.length > 0 && (
           <div className="hot-collections-slider">
             <div ref={sliderRef} className="keen-slider">
-              {collections.map((collection) => {
+              {collections.map((collection, index) => {
                 const collectionItem = {
                   ...collection,
                   title: collection.title,
@@ -128,6 +137,12 @@ const HotCollections = () => {
 
                 return (
                   <div className="keen-slider__slide" key={collection.id}>
+                    <div
+                      data-aos="zoom-in"
+                      data-aos-anchor="#section-collections"
+                      data-aos-duration="600"
+                      data-aos-delay={Math.min(index, 3) * 80}
+                    >
                     <div className="nft_coll">
                       <div className="nft_wrap">
                         <Link
@@ -177,6 +192,7 @@ const HotCollections = () => {
 
                         <span>ERC-{collection.code}</span>
                       </div>
+                    </div>
                     </div>
                   </div>
                 );

@@ -1,11 +1,17 @@
 import React, { useEffect } from "react";
 import SubHeader from "../images/subheader.jpg";
 import ExploreItems from "../components/explore/ExploreItems";
+import AOS from "aos";
 
 const Explore = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
-    // Does this work?
+
+    const frame = window.requestAnimationFrame(() => {
+      AOS.refreshHard();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   return (
@@ -22,7 +28,9 @@ const Explore = () => {
             <div className="container">
               <div className="row">
                 <div className="col-md-12 text-center">
-                  <h1>Explore</h1>
+                  <h1 data-aos="fade-up" data-aos-duration="700">
+                    Explore
+                  </h1>
                 </div>
                 <div className="clearfix"></div>
               </div>

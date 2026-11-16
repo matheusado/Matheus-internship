@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { Link, useParams } from "react-router-dom";
 import EthImage from "../images/ethereum.svg";
+import AOS from "aos";
 
 const ITEM_DETAILS_URL =
   "https://us-central1-nft-cloud-functions.cloudfunctions.net/itemDetails";
@@ -237,6 +238,18 @@ const ItemDetails = () => {
     return () => controller.abort();
   }, [nftId, retryCount]);
 
+  useEffect(() => {
+    if (status !== "ready" || !item) {
+      return undefined;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      AOS.refreshHard();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [status, item]);
+
   const owner = personFromDetails(item, "owner");
   const creator = personFromDetails(item, "creator");
   const title = item?.tag != null ? `${item.title} #${item.tag}` : item?.title;
@@ -272,7 +285,11 @@ const ItemDetails = () => {
 
             {status === "ready" && item && (
               <div className="row">
-                <div className="col-md-6 text-center">
+                <div
+                  className="col-md-6 text-center"
+                  data-aos="fade-right"
+                  data-aos-duration="700"
+                >
                   <DetailImage
                     src={item.nftImage}
                     alt={item.title || "NFT artwork"}
@@ -283,7 +300,12 @@ const ItemDetails = () => {
                   />
                 </div>
 
-                <div className="col-md-6">
+                <div
+                  className="col-md-6"
+                  data-aos="fade-left"
+                  data-aos-duration="700"
+                  data-aos-delay="100"
+                >
                   <div className="item_info">
                     {title && <h2>{title}</h2>}
 

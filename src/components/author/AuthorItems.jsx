@@ -76,7 +76,7 @@ const AuthorItems = ({ author }) => {
     <div className="de_tab_content">
       <div className="tab-1">
         <div className="row">
-          {items.map((nft) => {
+          {items.map((nft, index) => {
             const detailsItem = {
               ...nft,
               authorId: author.authorId,
@@ -88,6 +88,9 @@ const AuthorItems = ({ author }) => {
               <div
                 className="col-lg-3 col-md-6 col-sm-6 col-xs-12"
                 key={nft.nftId ?? nft.id}
+                data-aos="zoom-in"
+                data-aos-duration="600"
+                data-aos-delay={Math.min(index % 4, 3) * 80}
               >
                 <div className="nft__item">
                   <div className="author_list_pp">

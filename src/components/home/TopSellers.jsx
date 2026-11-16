@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import AOS from "aos";
 
 const API_URL =
   "https://us-central1-nft-cloud-functions.cloudfunctions.net/topSellers";
@@ -41,12 +42,20 @@ const TopSellers = () => {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      AOS.refreshHard();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [loading, sellers]);
+
   return (
     <section id="section-popular" className="pb-5">
       <div className="container">
         <div className="row">
           <div className="col-lg-12">
-            <div className="text-center">
+            <div className="text-center" data-aos="fade-up" data-aos-duration="700">
               <h2>Top Sellers</h2>
               <div className="small-border bg-color-2"></div>
             </div>
@@ -75,7 +84,12 @@ const TopSellers = () => {
             ) : sellers.length === 0 ? (
               <p className="text-center">No sellers available.</p>
             ) : (
-              <ol className="author_list">
+              <ol
+                className="author_list"
+                data-aos="fade-up"
+                data-aos-duration="700"
+                data-aos-delay="80"
+              >
                 {sellers.map((seller) => (
                   <li key={seller.id}>
                     <div className="author_list_pp">
