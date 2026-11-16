@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import AOS from "aos";
 import { NFTCard, NFTSkeleton } from "../home/NewItems";
 
 const API_URL =
@@ -62,6 +63,18 @@ const ExploreItems = () => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (loading || error || items.length === 0) {
+      return undefined;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      AOS.refreshHard();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [loading, error, items, visibleCount]);
+
   // Change sorting filter
   const handleFilterChange = (event) => {
     setFilter(event.target.value);
@@ -76,7 +89,7 @@ const ExploreItems = () => {
   return (
     <>
       {/* Sorting filter */}
-      <div className="col-md-12">
+      <div className="col-md-12" data-aos="fade-up" data-aos-duration="600">
         <select
           id="filter-items"
           value={filter}
@@ -134,10 +147,13 @@ const ExploreItems = () => {
       {/* NFT cards */}
       {!loading && !error && items.length > 0 && (
         <>
-          {items.slice(0, visibleCount).map((item) => (
+          {items.slice(0, visibleCount).map((item, index) => (
             <div
               key={item.nftId ?? item.id}
               className="col-lg-3 col-md-6 col-sm-6 col-xs-12"
+              data-aos="zoom-in"
+              data-aos-duration="600"
+              data-aos-delay={Math.min(index % 4, 3) * 80}
             >
               <NFTCard item={item} now={now} />
             </div>

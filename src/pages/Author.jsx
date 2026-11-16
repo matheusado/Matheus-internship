@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import AuthorBanner from "../images/author_banner.jpg";
 import AuthorItems from "../components/author/AuthorItems";
 import { NFTSkeleton } from "../components/home/NewItems";
+import AOS from "aos";
 
 const API_URL =
   "https://us-central1-nft-cloud-functions.cloudfunctions.net/authors";
@@ -78,6 +79,18 @@ const Author = () => {
       console.error("Unable to save follow state:", err);
     }
   }, [followedById]);
+
+  useEffect(() => {
+    if (loading || !author) {
+      return undefined;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      AOS.refreshHard();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [loading, author]);
 
   useEffect(() => {
     if (!authorId) {
@@ -279,7 +292,11 @@ const Author = () => {
             {!loading && !error && author && (
               <div className="row">
                 <div className="col-md-12">
-                  <div className="d_profile de-flex">
+                  <div
+                    className="d_profile de-flex"
+                    data-aos="fade-up"
+                    data-aos-duration="700"
+                  >
                     <div className="de-flex-col">
                       <div className="profile_avatar">
                         <span className="author-profile-avatar-frame">

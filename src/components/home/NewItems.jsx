@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
+import AOS from "aos";
 
 const API_URL =
   "https://us-central1-nft-cloud-functions.cloudfunctions.net/newItems";
@@ -255,13 +256,21 @@ const NewItems = () => {
     }
   }, [items, instanceRef]);
 
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      AOS.refreshHard();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [loading, items]);
+
   return (
     <section id="section-items" className="no-bottom">
       <div className="container">
         {/* Section heading */}
         <div className="row">
           <div className="col-lg-12">
-            <div className="text-center">
+            <div className="text-center" data-aos="fade-up" data-aos-duration="700">
               <h2>New Items</h2>
               <div className="small-border bg-color-2"></div>
             </div>
@@ -299,9 +308,16 @@ const NewItems = () => {
         {!loading && !error && items.length > 0 && (
           <div className="new-items-slider">
             <div ref={sliderRef} className="keen-slider">
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <div className="keen-slider__slide" key={item.nftId ?? item.id}>
-                  <NFTCard item={item} now={now} />
+                  <div
+                    data-aos="zoom-in"
+                    data-aos-anchor="#section-items"
+                    data-aos-duration="600"
+                    data-aos-delay={Math.min(index, 3) * 80}
+                  >
+                    <NFTCard item={item} now={now} />
+                  </div>
                 </div>
               ))}
             </div>
